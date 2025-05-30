@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { View, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { format } from 'date-fns';
+import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import { Calendar, MapPin, Users, ArrowRightLeft } from 'lucide-react-native';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
@@ -25,11 +26,11 @@ export function FlightSearchForm({ onSearch, loading = false }: FlightSearchForm
   });
   
   const [errors, setErrors] = useState<Partial<Record<keyof FlightSearchQuery, string>>>({});
+  const [isDatePickerVisible, setDatePickerVisible] = useState(false);
 
   const handleInputChange = (field: keyof FlightSearchQuery, value: string | number) => {
     setSearchParams({ ...searchParams, [field]: value });
     
-    // Clear error when user types
     if (errors[field]) {
       setErrors({ ...errors, [field]: undefined });
     }
@@ -77,9 +78,17 @@ export function FlightSearchForm({ onSearch, loading = false }: FlightSearchForm
     }
   };
 
-  const handleDateInput = (date: string) => {
-    // For web, we can use the native date picker
-    handleInputChange('departure_date', date);
+  const showDatePicker = () => {
+    setDatePickerVisible(true);
+  };
+
+  const hideDatePicker = () => {
+    setDatePickerVisible(false);
+  };
+
+  const handleDateConfirm = (date: Date) => {
+    handleInputChange('departure_date', format(date, 'yyyy-MM-dd'));
+    hideDatePicker();
   };
 
   return (
@@ -118,27 +127,24 @@ export function FlightSearchForm({ onSearch, loading = false }: FlightSearchForm
         </View>
       </View>
       
-      {Platform.OS === 'web' ? (
+      <TouchableOpacity onPress={showDatePicker}>
         <Input
           label="Departure Date"
-          placeholder="YYYY-MM-DD"
-          value={searchParams.departure_date}
-          onChangeText={(text) => handleInputChange('departure_date', text)}
+          value={format(new Date(searchParams.departure_date), 'MMM dd, yyyy')}
           error={errors.departure_date}
           leftIcon={<Calendar size={20} color={COLORS.primary.main} />}
-          keyboardType="default"
-          inputMode="text"
+          editable={false}
+          pointerEvents="none"
         />
-      ) : (
-        <Input
-          label="Departure Date"
-          placeholder="YYYY-MM-DD"
-          value={searchParams.departure_date}
-          onChangeText={handleDateInput}
-          error={errors.departure_date}
-          leftIcon={<Calendar size={20} color={COLORS.primary.main} />}
-        />
-      )}
+      </TouchableOpacity>
+
+      <DateTimePickerModal
+        isVisible={isDatePickerVisible}
+        mode="date"
+        onConfirm={handleDateConfirm}
+        onCancel={hideDatePicker}
+        minimumDate={new Date()}
+      />
       
       <Input
         label="Passengers"
